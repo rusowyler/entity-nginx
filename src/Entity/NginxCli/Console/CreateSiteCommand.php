@@ -1,13 +1,12 @@
 <?php namespace Entity\NginxCli\Console;
 
-use function Couchbase\defaultDecoder;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
 
 class CreateSiteCommand extends Command
 {
@@ -58,9 +57,15 @@ class CreateSiteCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $io = new SymfonyStyle($input, $output);
+
+        $io->title("BASIC NGINX ADMINS HELPER");
+
+        $io->section('Data validation');
+
         // I'm root?
-        if(trim(shell_exec('whoami')) != 'root'){
-            $output->writeln("<error>You need to be root to perform these actions. Prefix with sudo</error>");
+        if (trim(shell_exec('whoami')) != 'root') {
+            $io->error('You need to be root to perform these actions. Prefix with sudo');
             die;
         }
 
@@ -71,31 +76,38 @@ class CreateSiteCommand extends Command
         $template = $input->getOption('template');
         $folder   = empty($input->getOption('folder')) ? $domain : $input->getOption('folder');
 
-        $nginxTemplate = self::NGINX_PATH . self::NGINX_TEMPLATES . '/' . $template;
+        $nginxTemplate      = self::NGINX_PATH . self::NGINX_TEMPLATES . '/' . $template;
+        $nginxServer        = self::NGINX_PATH . self::NGINX_AVAILABLE . '/' . $domain;
+        $nginxServerEnabled = self::NGINX_PATH . self::NGINX_ENABLED . '/' . $domain;
 
         if (empty($domain)) {
-            $output->writeln("<error>Domain can't be empty</error>");
+            $io->error('Domain can\'t be empty');
             die;
         }
 
         if (empty($user)) {
-            $output->writeln("<error>User option can't be empty</error>");
+            $io->error('User option can\'t be empty');
             die;
         }
 
         if (empty($template) || !in_array($template, ['magento-1', 'wordpress', 'envoyer'])) {
-            $output->writeln("<error>Template option must be valid value</error>");
+            $io->error('Template option must be valid value');
             die;
         }
 
         if ( !$fileSystem->exists(self::NGINX_PATH)) {
-            $output->writeln("<error>Nginx folder not found</error>");
+            $io->error('Nginx folder not found');
             die;
+        }
+        else {
+            $io->success("NGINX found");
         }
 
         if ( !$fileSystem->exists($nginxTemplate)) {
-            $output->writeln("<error>Nginx templates file not found in {$nginxTemplate}</error>");
+            $io->error('Nginx templates file not found in {$nginxTemplate}');
             die;
+        } else {
+            $io->success("NGINX template found");
         }
 
         $rootPath = self::ROOT_PATH . $folder;
@@ -112,23 +124,32 @@ class CreateSiteCommand extends Command
                 break;
         }
 
-        $output->writeln("<info>Domain: {$domain}</info>");
-        $output->writeln("<info>Template: {$template}</info>");
-        $output->writeln("<info>Folder: {$folder} ({$rootPath})</info>");
-        $output->writeln("<info>Document Root: {$sitePath})</info>");
-        $output->writeln("<info>User: {$user}</info>");
-
 
         // Chequeo que no exista ni el nginx server ni la carpeta de destino
         if ($fileSystem->exists($rootPath)) {
-            $output->writeln("<error>Folder already exists</error>");
+            $io->error("Folder already exists ({$rootPath})");
             die;
+        } else {
+            $io->success("Data folder doesn't exist");
         }
 
-        if ($fileSystem->exists(self::NGINX_PATH . self::NGINX_AVAILABLE . '/' . $domain)) {
-            $output->writeln("<error>Server already exists</error>");
+        if ($fileSystem->exists($nginxServer)) {
+            $io->error("Server already exists ({$nginxServer})");
             die;
+        } else {
+            $io->success("Server doesn't exist");
         }
+
+        $io->listing([
+                         "Domain: {$domain}",
+                         "Template: {$template}",
+                         "Folder: {$folder} ({$rootPath})",
+                         "Document Root: {$sitePath})",
+                         "User: {$user}",
+                     ]
+        );
+
+        $io->section('Making site container');
 
         // Creo las carpetas:
         $fileSystem->mkdir($rootPath . $sitePath);
@@ -136,13 +157,12 @@ class CreateSiteCommand extends Command
         $fileSystem->mkdir($rootPath . '/cache');
         $fileSystem->chown($rootPath, $user, true);
 
-        // Copio y personalizo el template
-        $nginxServer        = self::NGINX_PATH . self::NGINX_AVAILABLE . '/' . $domain;
-        $nginxServerEnabled = self::NGINX_PATH . self::NGINX_ENABLED . '/' . $domain;
+        $io->section('Creating and tuning NGINX server files');
 
+        // Copio y personalizo el template
         $templateContent = file_get_contents($nginxTemplate);
         if ( !$templateContent) {
-            $output->writeln("<error>Could not read template</error>");
+            $io->error("Could not read template ({$nginxTemplate})");
             die;
         }
 
@@ -151,22 +171,25 @@ class CreateSiteCommand extends Command
         $templateContent = str_replace('{root}', $sitePath, $templateContent);
 
         if ( !file_put_contents($nginxServer, $templateContent)) {
-            $output->writeln("<error>Could not create new server file</error>");
+            $io->error("Could not create new server file ({$nginxServer})");
             die;
         }
 
+        $io->section('Enabling and reloading NGINX');
+
         // Habilito el server!
-        $output->writeln('<comment>Enabling site</comment>');
         $fileSystem->symlink($nginxServer, $nginxServerEnabled);
+        $io->success("Site ({$domain} enabled.)");
+
 
         // Prueba la configuración
-        $output->writeln('<comment>Nginx check config</comment>');
         exec('nginx -t 2>&1', $results, $return);
-
         if ($return != 0) {
-            $output->writeln("<error>Nginx Syntax error. Disabling site (removing symlink).</error>");
+            $io->error("NGINX Syntax error. Disabling site (removing symlink).");
             $fileSystem->remove($nginxServerEnabled);
             die;
+        } else {
+            $io->success("NGINX syntax check OK");
         }
 
         // Hago un reload
@@ -174,7 +197,9 @@ class CreateSiteCommand extends Command
         exec('service nginx reload 2>&1', $results, $return);
 
         if ($return != 0) {
-            $output->writeln("<error>Nginx reload failed!!!!!</error>");
+            $io->error("NGINX reload failed!!!!!");
+        } else {
+            $io->success("NGINX and {$domain} are ready to go...");
         }
 
         die;

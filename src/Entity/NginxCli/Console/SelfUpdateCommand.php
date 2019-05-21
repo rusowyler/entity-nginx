@@ -14,7 +14,7 @@ class SelfUpdateCommand extends Command {
    * @var string
    */
   const SRC = 'https://raw.githubusercontent.com/rusowyler/entity-nginx/master/dist/nginx-cli.phar';
-  
+
   /**
    * @var ProgressBar|null
    */
