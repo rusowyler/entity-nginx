@@ -6,4 +6,4 @@ This Command Line Interface helps admins to create nginx servers (virtualservers
 
 To install Nginx-cli, execute the following command on your server:
 
-    curl -fsSL https://raw.githubusercontent.com/rusowyler/nginx-cli/master/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/rusowyler/entity-nginx/master/install.sh | bash

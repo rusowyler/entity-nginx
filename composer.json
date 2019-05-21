@@ -19,6 +19,9 @@
       "Entity\\": "src/Entity"
     }
   },
-  "bin": ["bin/nginx-cli"],
-  "minimum-stability": "stable"
+  "bin": ["bin/entity-cli"],
+  "minimum-stability": "stable",
+  "require-dev": {
+    "clue/phar-composer": "^1.0"
+  }
 }

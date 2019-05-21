@@ -1,3 +1,3 @@
-wget https://raw.githubusercontent.com/Entity/nginx-cli/master/dist/nginx-cli.phar
-sudo mv nginx-cli.phar /usr/local/bin/forge
-sudo chmod +x /usr/local/bin/forge
+wget https://raw.githubusercontent.com/rusowyler/entity-nginx/master/dist/nginx-cli.phar
+sudo mv nginx-cli.phar /usr/local/bin/entity
+sudo chmod +x /usr/local/bin/entity
