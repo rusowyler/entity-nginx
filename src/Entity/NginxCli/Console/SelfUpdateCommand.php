@@ -13,8 +13,8 @@ class SelfUpdateCommand extends Command {
    * Source URL
    * @var string
    */
-  const SRC = 'https://raw.githubusercontent.com/Entity/nginx-cli/master/dist/nginx-cli.phar';
-
+  const SRC = 'https://raw.githubusercontent.com/rusowyler/entity-nginx/master/dist/nginx-cli.phar';
+  
   /**
    * @var ProgressBar|null
    */
