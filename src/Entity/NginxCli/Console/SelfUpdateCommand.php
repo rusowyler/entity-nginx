@@ -27,7 +27,7 @@ class SelfUpdateCommand extends Command {
   {
     $this
       ->setName('self-update')
-      ->setDescription('Update Entity CLI');
+      ->setDescription('Update nginx-cli');
   }
 
   /**
@@ -46,9 +46,9 @@ class SelfUpdateCommand extends Command {
     $tmpFilepath = $tmpDir . '/' . $tmpFilename;
 
     if(!is_writable($tmpDir))
-      throw new Exception('Entity update failed: "'.$tmpDir.'" is not writable. Try `sudo !!`.');
+      throw new Exception('nginx-cli update failed: "'.$tmpDir.'" is not writable. Try `sudo !!`.');
     if(!is_writable($localFilename))
-      throw new Exception('Entity update failed: "'.$localFilename.'" is not writable. Try `sudo !!`.');
+      throw new Exception('nginx-cli update failed: "'.$localFilename.'" is not writable. Try `sudo !!`.');
 
     $output->writeln('<info>Updating '.$localFilename.'...</info>');
 

@@ -64,6 +64,8 @@ class CreateSiteCommand extends Command
         $template = $input->getOption('template');
         $folder   = empty($input->getOption('folder')) ? $domain : $input->getOption('folder');
 
+        $nginxTemplate = self::NGINX_PATH . self::NGINX_TEMPLATES . '/' . $template;
+
         if (empty($domain)) {
             $output->writeln("<error>Domain can't be empty</error>");
             die;
@@ -79,13 +81,13 @@ class CreateSiteCommand extends Command
             die;
         }
 
-        if (!$fileSystem->exists(self::NGINX_PATH)) {
+        if ( !$fileSystem->exists(self::NGINX_PATH)) {
             $output->writeln("<error>Nginx folder not found</error>");
             die;
         }
 
-        if (!$fileSystem->exists(self::NGINX_PATH . '/' . self::NGINX_TEMPLATES)) {
-            $output->writeln("<error>Nginx templates folder not found</error>");
+        if ( !$fileSystem->exists($nginxTemplate)) {
+            $output->writeln("<error>Nginx templates file not found in {$nginxTemplate}</error>");
             die;
         }
 
@@ -124,10 +126,9 @@ class CreateSiteCommand extends Command
         $fileSystem->mkdir($rootPath . $sitePath);
         $fileSystem->mkdir($rootPath . '/logs');
         $fileSystem->mkdir($rootPath . '/cache');
-        $fileSystem->chown($user, $rootPath, true);
+        $fileSystem->chown($rootPath, $user, true);
 
         // Copio y personalizo el template
-        $nginxTemplate      = self::NGINX_PATH . self::NGINX_TEMPLATES . '/' . $template;
         $nginxServer        = self::NGINX_PATH . self::NGINX_AVAILABLE . '/' . $domain;
         $nginxServerEnabled = self::NGINX_PATH . self::NGINX_ENABLED . '/' . $domain;
 
@@ -154,13 +155,13 @@ class CreateSiteCommand extends Command
         $output->writeln('<comment>Nginx check config</comment>');
         exec('nginx -t', $results);
 
-        if(strpos($results, 'syntax is ok') == false){
+        if (strpos($results, 'syntax is ok') == false) {
             $output->writeln("<error>Nginx Syntax error. Disabling site (removing symlink).</error>");
             $fileSystem->remove($nginxServerEnabled);
             die;
         }
 
-        if(strpos($results, 'test is successful') == false){
+        if (strpos($results, 'test is successful') == false) {
             $output->writeln("<error>Nginx Test error. Disabling site (removing symlink).</error>");
             $fileSystem->remove($nginxServerEnabled);
             die;
@@ -172,8 +173,6 @@ class CreateSiteCommand extends Command
 
 
         die;
-
-
 
 
         $finder = new Finder();
