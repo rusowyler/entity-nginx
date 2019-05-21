@@ -1,5 +1,6 @@
 <?php namespace Entity\NginxCli\Console;
 
+use function Couchbase\defaultDecoder;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -57,6 +58,12 @@ class CreateSiteCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        // I'm root?
+        if(trim(shell_exec('whoami')) != 'root'){
+            $output->writeln("<error>You need to be root to perform these actions. Prefix with sudo</error>");
+            die;
+        }
+
         $fileSystem = new Filesystem();
 
         $domain   = $input->getArgument('domain');
@@ -91,25 +98,8 @@ class CreateSiteCommand extends Command
             die;
         }
 
-        $output->writeln("<info>Domain: {$domain}</info>");
-        $output->writeln("<info>Template: {$template}</info>");
-        $output->writeln("<info>Folder: {$folder}</info>");
-        $output->writeln("<info>User: {$user}</info>");
-
         $rootPath = self::ROOT_PATH . $folder;
 
-        // Chequeo que no exista ni el nginx server ni la carpeta de destino
-        if ($fileSystem->exists($rootPath)) {
-            $output->writeln("<error>Folder already exists</error>");
-            die;
-        }
-
-        if ($fileSystem->exists(self::NGINX_PATH . self::NGINX_AVAILABLE . '/' . $domain)) {
-            $output->writeln("<error>Server already exists</error>");
-            die;
-        }
-
-        // Creo las carpetas:
         switch ($template) {
             case 'wordpress':
                 $sitePath = '/public';
@@ -120,6 +110,24 @@ class CreateSiteCommand extends Command
             case 'envoyer':
                 $sitePath = '/current/public';
                 break;
+        }
+
+        $output->writeln("<info>Domain: {$domain}</info>");
+        $output->writeln("<info>Template: {$template}</info>");
+        $output->writeln("<info>Folder: {$folder} ({$rootPath})</info>");
+        $output->writeln("<info>Document Root: {$sitePath})</info>");
+        $output->writeln("<info>User: {$user}</info>");
+
+
+        // Chequeo que no exista ni el nginx server ni la carpeta de destino
+        if ($fileSystem->exists($rootPath)) {
+            $output->writeln("<error>Folder already exists</error>");
+            die;
+        }
+
+        if ($fileSystem->exists(self::NGINX_PATH . self::NGINX_AVAILABLE . '/' . $domain)) {
+            $output->writeln("<error>Server already exists</error>");
+            die;
         }
 
         // Creo las carpetas:
@@ -153,39 +161,22 @@ class CreateSiteCommand extends Command
 
         // Prueba la configuración
         $output->writeln('<comment>Nginx check config</comment>');
-        exec('nginx -t', $results);
+        exec('nginx -t 2>&1', $results, $return);
 
-        if (strpos($results, 'syntax is ok') == false) {
+        if ($return != 0) {
             $output->writeln("<error>Nginx Syntax error. Disabling site (removing symlink).</error>");
-            $fileSystem->remove($nginxServerEnabled);
-            die;
-        }
-
-        if (strpos($results, 'test is successful') == false) {
-            $output->writeln("<error>Nginx Test error. Disabling site (removing symlink).</error>");
             $fileSystem->remove($nginxServerEnabled);
             die;
         }
 
         // Hago un reload
         $output->writeln('<comment>Nginx reload</comment>');
-        exec('service nginx reload');
+        exec('service nginx reload 2>&1', $results, $return);
 
-
-        die;
-
-
-        $finder = new Finder();
-        $path   = '/etc/nginx/sites-enabled';
-
-        $finder->files()->in($path)->sortByName();
-
-        $output->writeln('<info>=== /etc/nginx/sites-enabled ===');
-
-        foreach ($finder as $file) {
-            $output->writeln('<comment>' . $file->getFilename() . '</comment>');
+        if ($return != 0) {
+            $output->writeln("<error>Nginx reload failed!!!!!</error>");
         }
 
-        $output->writeln('<info>=== End of Output ===</info>');
+        die;
     }
 }
