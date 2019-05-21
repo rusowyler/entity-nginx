@@ -1,0 +1,24 @@
+{
+  "name": "Entity/nginx-cli",
+  "description": "A CLI setting up nginx sites",
+  "tags": ["nginx", "wordpress", "magento", "laravel"],
+  "require": {
+    "symfony/console": "2.5.*",
+    "symfony/finder": "2.5.*",
+    "symfony/filesystem": "2.5.*"
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Mauricio Wyler",
+      "email": "mwyler@ebowe.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Entity\\": "src/Entity"
+    }
+  },
+  "bin": ["bin/nginx-cli"],
+  "minimum-stability": "stable"
+}

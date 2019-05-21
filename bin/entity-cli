@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Entity\NginxCli\Console\SelfUpdateCommand;
+use Entity\NginxCli\Console\SitesCommand;
+use Entity\NginxCli\Console\CreateSiteCommand;
+
+use Symfony\Component\Console\Application;
+
+$application = new Application();
+
+$application->add(new SelfUpdateCommand);
+$application->add(new SitesCommand);
+$application->add(new CreateSiteCommand());
+
+$application->run();
