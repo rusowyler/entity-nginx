@@ -116,12 +116,18 @@ class CreateSiteCommand extends Command
             case 'wordpress':
                 $sitePath = '/public';
                 break;
+            case 'wordpress-cache':
+                $sitePath = '/public';
+                break;
             case 'magento-1':
                 $sitePath = '/public/htdocs';
                 break;
             case 'envoyer':
                 $sitePath = '/current/public';
                 break;
+            default:
+                $io->error("Unknown template ({$template})");
+                die;
         }
 
 
