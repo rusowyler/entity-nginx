@@ -151,17 +151,19 @@ class CreateSiteCommand extends Command
         // Creo las carpetas:
 
         // Si no existe la carpeta root la creo para evitar warnings de nginx
-        $result = preg_match('/(?:^\s*root\s*)(?P<root>[\w\/]*)/i', $templateContent, $data);
-        if (!$result || !isset($data['root'])){
+        $result = preg_match('/(?:^\s*root\s*)(?P<root>[\.\w\/]*)/mi', $templateContent, $data);
+        if ( !$result || !isset($data['root'])) {
             $io->error("Could find root path in template");
             die;
         }
 
+        $documentRoot = trim($data['root']);
+
         $fileSystem->mkdir($rootPath . '/logs');
         $fileSystem->mkdir($rootPath . '/cache');
 
-        if(!$fileSystem->exists($data['root'])){
-            $fileSystem->mkdir($data['root']);
+        if ( !$fileSystem->exists($documentRoot)) {
+            $fileSystem->mkdir($documentRoot);
             $io->success("Root directory created");
         }
 
