@@ -90,16 +90,10 @@ class CreateSiteCommand extends Command
             die;
         }
 
-        if (empty($template) || !in_array($template, ['magento-1', 'wordpress', 'envoyer'])) {
-            $io->error('Template option must be valid value');
-            die;
-        }
-
         if ( !$fileSystem->exists(self::NGINX_PATH)) {
             $io->error('Nginx folder not found');
             die;
-        }
-        else {
+        } else {
             $io->success("NGINX found");
         }
 
@@ -111,25 +105,6 @@ class CreateSiteCommand extends Command
         }
 
         $rootPath = self::ROOT_PATH . $folder;
-
-        switch ($template) {
-            case 'wordpress':
-                $sitePath = '/public';
-                break;
-            case 'wordpress-cache':
-                $sitePath = '/public';
-                break;
-            case 'magento-1':
-                $sitePath = '/public/htdocs';
-                break;
-            case 'envoyer':
-                $sitePath = '/current/public';
-                break;
-            default:
-                $io->error("Unknown template ({$template})");
-                die;
-        }
-
 
         // Chequeo que no exista ni el nginx server ni la carpeta de destino
         if ($fileSystem->exists($rootPath)) {
@@ -150,18 +125,9 @@ class CreateSiteCommand extends Command
                          "Domain: {$domain}",
                          "Template: {$template}",
                          "Folder: {$folder} ({$rootPath})",
-                         "Document Root: {$sitePath})",
                          "User: {$user}",
                      ]
         );
-
-        $io->section('Making site container');
-
-        // Creo las carpetas:
-        $fileSystem->mkdir($rootPath . $sitePath);
-        $fileSystem->mkdir($rootPath . '/logs');
-        $fileSystem->mkdir($rootPath . '/cache');
-        $fileSystem->chown($rootPath, $user, true);
 
         $io->section('Creating and tuning NGINX server files');
 
@@ -174,12 +140,34 @@ class CreateSiteCommand extends Command
 
         $templateContent = str_replace('{path}', $rootPath, $templateContent);
         $templateContent = str_replace('{domain}', $domain, $templateContent);
-        $templateContent = str_replace('{root}', $sitePath, $templateContent);
 
         if ( !file_put_contents($nginxServer, $templateContent)) {
             $io->error("Could not create new server file ({$nginxServer})");
             die;
         }
+
+        $io->section('Making site container');
+
+        // Creo las carpetas:
+
+        // Si no existe la carpeta root la creo para evitar warnings de nginx
+        $result = preg_match('/(?:^\s*root\s*)(?P<root>[\w\/]*)/i', $templateContent, $data);
+        if (!$result || !isset($data['root'])){
+            $io->error("Could find root path in template");
+            die;
+        }
+
+        $fileSystem->mkdir($rootPath . '/logs');
+        $fileSystem->mkdir($rootPath . '/cache');
+
+        if(!$fileSystem->exists($data['root'])){
+            $fileSystem->mkdir($data['root']);
+            $io->success("Root directory created");
+        }
+
+        // Setting user.group
+        $fileSystem->chown($rootPath, $user, true);
+        $fileSystem->chgrp($rootPath, $user, true);
 
         $io->section('Enabling and reloading NGINX');
 
@@ -199,7 +187,6 @@ class CreateSiteCommand extends Command
         }
 
         // Hago un reload
-        $output->writeln('<comment>Nginx reload</comment>');
         exec('service nginx reload 2>&1', $results, $return);
 
         if ($return != 0) {
